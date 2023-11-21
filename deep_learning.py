@@ -4,18 +4,25 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Embedding, Input, Dense, Flatten, Concatenate
+from tensorflow.keras.layers import Embedding, Input, Dense, Flatten, Concatenate, Dropout
 
 # Sample DataFrame
-df = pd.DataFrame({
-    'userId': [1, 2, 3, 4, 5],
-    'movieId': [10, 20, 30, 40, 50],
-    'address': ['New York', 'Los Angeles', 'New York', 'Chicago', 'Los Angeles'],
-    'rating': [5, 3, 4, 2, 1]
-})
+#df = pd.DataFrame({
+#    'userId': [1, 2, 3, 4, 5],
+#    'movieId': [10, 20, 30, 40, 50],
+#    'address': ['New York', 'Los Angeles', 'New York', 'Chicago', 'Los Angeles'],
+#    'rating': [5, 3, 4, 2, 1]
+#})
+import pandas as pd
 
-df = pd.read_csv('ml-latest-small/modified_merged_data.csv', names=['movieId', 'userId', 'address', 'rating'])
+# Specify the columns you want to load
+names=['movieId', 'userId', 'address', 'rating']
+df = pd.read_csv('ml-latest-small/modified_merged_data.csv', usecols=names)
+print(df)
+# Convert 'ratings' to numeric, coercing errors to NaN
 df['rating'] = pd.to_numeric(df['rating'], errors='coerce')
-
+df.dropna(subset=['rating'], inplace=True)
+print(df)
 
 # Encode categorical data
 user_encoder = LabelEncoder()
@@ -57,8 +64,16 @@ location_vec = Flatten()(location_embedding)
 # Concatenate the embeddings
 concat = Concatenate()([user_vec, item_vec, location_vec])
 
-# Neural network
-dense = Dense(128, activation='relu')(concat)
+# Neural network 1
+#dense = Dense(128, activation='relu')(concat)
+#dense = Dense(64, activation='relu')(dense)
+#output = Dense(1, activation='sigmoid')(dense)
+
+# Neural network 2
+dense = Dense(256, activation='relu')(concat)
+dense = Dropout(0.2)(dense)  # Dropout layer for regularization
+dense = Dense(128, activation='relu')(dense)
+dense = Dropout(0.2)(dense)  # Another dropout layer
 dense = Dense(64, activation='relu')(dense)
 output = Dense(1, activation='sigmoid')(dense)
 
@@ -74,7 +89,7 @@ model.fit(
     [train.userId, train.movieId, train.address],
     train.rating,
     batch_size=32,
-    epochs=5,
+    epochs=10,
     validation_split=0.1,
     verbose=1
 )
